@@ -1,0 +1,34 @@
+#temporary files
+*~
+
+# Object files
+src/*.o
+test/*.o
+src/*.ko
+test/*.ko
+
+# Libraries
+*.lib
+src/*.a
+test/*.a
+
+# Shared objects (inc. Windows DLLs)
+*.dll
+*.so
+*.so.*
+*.dylib
+
+# Executables
+*.exe
+*.out
+*.app
+
+# default build directory
+build
+
+# CMake output
+*CMakeCache*
+*CMakeFiles*
+*cmake_install.cmake*
+*Makefile
+
