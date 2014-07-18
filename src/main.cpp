@@ -3,6 +3,7 @@
 #include <fstream>
 #include <string>
 #include <unistd.h>
+#include "DisplayHandler.hpp"
 
 //#include <posix.h>
 //#include <native/task.h>
@@ -15,11 +16,6 @@
 using namespace std ;
 
 int main () {
-  cout << "hello world" << endl ;
-  int err ;
-
-
+  DisplayHandler();
   return 0 ;
 }
-
-
