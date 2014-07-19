@@ -11,8 +11,8 @@ set(CMAKE_SYSTEM_PROCESSOR arm)
 
 set(GCC_COMPILER_VERSION "4.6" CACHE STRING "GCC Compiler version")
 set(XENOMAI_BASE_DIR "/usr/xenomai" CACHE STRING "Xenomai base dir")
-set(XENOMAI_INC_DIR "${XENOMAI_BASE_DIR}/include")
-set(XENOMAI_LIB_DIR "${XENOMAI_BASE_DIR}/lib")
+set(XENOMAI_INC_DIR "${XENOMAI_BASE_DIR}/include/")
+set(XENOMAI_LIB_DIR "${XENOMAI_BASE_DIR}/lib/")
 
 set(FLOAT_ABI_SUFFIX "")
 

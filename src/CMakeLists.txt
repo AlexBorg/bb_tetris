@@ -2,7 +2,7 @@
 include_directories (${XENOMAI_INC_DIR}) 
 
 # Make sure the linker can find the 3rd party libraries. 
-link_directories (${BBT_SOURCE_DIR}/3rdparty/lib/ ) 
+link_directories (${BBT_SOURCE_DIR}/3rdparty/lib/ ${XENOMAI_LIB_DIR}) 
 
 # Add executable called "bbcd" that is built from the source files 
 # "ioTest.cpp". The extensions are automatically found. 
