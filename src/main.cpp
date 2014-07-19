@@ -3,6 +3,9 @@
 #include <fstream>
 #include <string>
 #include <unistd.h>
+
+#include <rtdk.h>
+#include "InputHandler.hpp"
 #include "DisplayHandler.hpp"
 
 //#include <posix.h>
@@ -16,6 +19,14 @@
 using namespace std ;
 
 int main () {
-  DisplayHandler();
+  rt_print_auto_init ( 1 ) ;
+
+  InputHandler input ;
+  input . start () ;
+
+  while ( 1 )
+    sleep ( 1000 ) ;
+
+  //DisplayHandler();
   return 0 ;
 }

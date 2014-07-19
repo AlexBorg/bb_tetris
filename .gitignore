@@ -1,5 +1,6 @@
 #temporary files
 *~
+*.swp
 
 # Object files
 src/*.o

@@ -7,9 +7,9 @@
 
 // instead of passing queue structure into contructors, have the objects create
 // the queue based on this name 
-#define BBT_EVENT_QUEUE_NAME "BBT_EVENT_INPUT_QUEUE"
+#define BBT_EVENT_QUEUE_NAME "/BBT_EVENT_INPUT_QUEUE"
 #define BBT_EVENT_MSG_SIZE 4
-#define BBT_EVENT_QUEUE_SIZE 300
+#define BBT_EVENT_QUEUE_SIZE 32
 
 ////////////////////
 // events from the InputHandler to the Processing Handler
@@ -18,7 +18,9 @@ enum bbtEvents {
   , EV_LEFT
   , EV_RIGHT
   , EV_ROT_LEFT
-  , EV_ROT_RIGHT } ;
+  , EV_ROT_RIGHT
+  , EV_DOWN
+  , EV_PAUSE } ;
 
 typedef struct {
   // TODO: Borg: if we store this struct in a 2D array, do we even need xy? 
