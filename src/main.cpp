@@ -24,9 +24,9 @@ int main () {
   InputHandler input ;
   input . start () ;
 
-  while ( 1 )
-    sleep ( 1000 ) ;
+  //while ( 1 )
+    //sleep ( 1000 ) ;
 
-  //DisplayHandler();
+  DisplayHandler();
   return 0 ;
 }

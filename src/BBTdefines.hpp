@@ -23,14 +23,28 @@ enum bbtEvents {
   , EV_PAUSE } ;
 
 typedef struct {
-  // TODO: Borg: if we store this struct in a 2D array, do we even need xy? 
-  int x ;
-  int y ;
-  // TODO: Borg: can we replace colors with color def enumerations?
-  int r ;
-  int b ;
-  int g ;
+  int color;
 } blockData ;
 
+const int BOARD_WIDTH = 10;
+const int BOARD_HEIGHT = 20;
+
+class Tetromino {
+public:
+   static const int width = 4;
+   static const int height = 4;
+
+   blockData blocks[width][height]; // Grid containing the blockData for pieces
+   int x, y;                        // Bottom-left position of 4x4 grid
+
+   //void rotateLeft();
+   //void rotateRight();
+   //void randomize();
+};
+
+struct GameState {
+   blockData board[BOARD_WIDTH][BOARD_HEIGHT];
+   Tetromino active, next;
+};
 
 #endif //BBT_DEFINES
