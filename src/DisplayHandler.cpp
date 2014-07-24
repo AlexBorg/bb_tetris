@@ -4,9 +4,11 @@
 #include <GL/glx.h>
 #include <GL/glu.h>
 #include <SDL/SDL.h>
-#include <rtdk.h>
-#include <native/timer.h>
 #include "BBTdefines.hpp"
+
+#ifndef NOXENOMAI
+#include <native/timer.h>
+#endif
 
 static GameState game;
 

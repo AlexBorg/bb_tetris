@@ -11,6 +11,12 @@
 #define BBT_EVENT_MSG_SIZE 4
 #define BBT_EVENT_QUEUE_SIZE 32
 
+#ifdef NOXENOMAI
+#define rt_printf printf
+#else
+#include <rtdk.h>
+#endif
+
 ////////////////////
 // events from the InputHandler to the Processing Handler
 enum bbtEvents {

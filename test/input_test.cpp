@@ -5,7 +5,6 @@
 #include "InputHandler.hpp"
 #include "BBTdefines.hpp"
 #include "errno.h"
-#include "rtdk.h"
 
 #include <stdio.h>
 
@@ -13,7 +12,9 @@ int main ( int argc , char** argv )
 {
   printf ( "input test start\n" ) ;
 
+#ifndef NOXENOMAI
   rt_print_auto_init ( 1 ) ;
+#endif
 
   InputHandler in_hand ;
   mqd_t input = mq_open ( BBT_EVENT_QUEUE_NAME

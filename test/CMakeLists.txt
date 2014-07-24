@@ -8,6 +8,12 @@ link_directories (${BBT_BINARY_DIR} ${BBT_SOURCE_DIR}/3rdparty/lib ${XENOMAI_LIB
 # "test_source.cpp". The extensions are automatically found. 
 add_executable (input_test input_test.cpp ${BBT_SOURCE_DIR}/src/InputHandler.cpp) 
 
-# Link the executable to the library. 
-target_link_libraries (input_test native xenomai pthread rt) 
+if (NOXENOMAI)
+  # Link the executable to the 3rdparty library. 
+  target_link_libraries (input_test pthread rt) 
+  add_definitions(-DNOXENOMAI=1)
+else ()
+  # Link the executable to the 3rdparty library. 
+  target_link_libraries (input_test native xenomai pthread rt) 
+endif()
 

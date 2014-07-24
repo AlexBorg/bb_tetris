@@ -16,6 +16,7 @@ On the beagleboard: requires cmake, opencv, and xenomai
 
 options that can be added:
 	cmake -DGCC_COMPILER_VERSION=4.8 -DXENOMAI_BASE_DIR=<copy of /usr/xenomai> <target source dir>
+        cmake -DNOXENOMAI
 	make
 
 ### authors

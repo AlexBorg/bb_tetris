@@ -4,7 +4,10 @@
 #include <string>
 #include <unistd.h>
 
+#ifndef NOXENOMAI
 #include <rtdk.h>
+#endif
+
 #include "InputHandler.hpp"
 #include "DisplayHandler.hpp"
 
@@ -19,7 +22,9 @@
 using namespace std ;
 
 int main () {
+#ifndef NOXENOMAI
   rt_print_auto_init ( 1 ) ;
+#endif
 
   InputHandler input ;
   input . start () ;

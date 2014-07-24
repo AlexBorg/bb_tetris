@@ -9,11 +9,11 @@
 /// xenomai/posix includes
 #include <mqueue.h>
 #include <pthread.h>
-#include <rtdk.h>
 
 #include <linux/joystick.h>
 #include <linux/input.h>
 
+#include <stdio.h>
 #include <glob.h>
 #include <string.h>
 #include <errno.h>
@@ -76,8 +76,9 @@ bool isValidInputEventFile ( char* filename )
              , filename 
              , name ) ;
 
-  if ( strstr ( name , "PLAYSTATION" )
-      || strstr ( name , "Keyboard" ))
+  if ( strcasestr ( name , "PLAYSTATION" )
+      || strcasestr ( name , "Keyboard" )
+      )
   {
     rt_printf ( "using device%s\n" , filename ) ;
     result = true ;
@@ -105,7 +106,7 @@ void InputHandler :: start ()
 
   glob_t globbuf ;
   glob ( "/dev/input/event*" , GLOB_TILDE , NULL , &globbuf ) ;
-  printf ( "number of events found %d\n" , globbuf . gl_pathc ) ;
+  printf ( "number of events found %d\n" , ( int ) globbuf . gl_pathc ) ;
 
   for ( int loop = 0 ; loop < globbuf . gl_pathc ; ++loop )
   {
