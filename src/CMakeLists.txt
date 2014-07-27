@@ -11,9 +11,9 @@ add_executable (bbt main.cpp InputHandler.cpp DisplayHandler.cpp)
 
 if (NOXENOMAI)
   # Link the executable to the 3rdparty library. 
-  target_link_libraries (bbt pthread rt X11 GL GLU SDL)
+  target_link_libraries (bbt pthread rt X11 GL GLU SDL SDL_image)
   add_definitions(-DNOXENOMAI=1)
 else ()
   # Link the executable to the 3rdparty library. 
-  target_link_libraries (bbt native xenomai pthread rt X11 GL GLU SDL) 
+  target_link_libraries (bbt native xenomai pthread rt X11 GL GLU SDL SDL_image) 
 endif()

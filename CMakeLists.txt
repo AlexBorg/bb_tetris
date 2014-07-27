@@ -8,11 +8,14 @@ project (BBT)
 set(CMAKE_SYSTEM_NAME Linux)
 set(CMAKE_SYSTEM_VERSION 1)
 set(CMAKE_SYSTEM_PROCESSOR arm)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 
 set(GCC_COMPILER_VERSION "4.6" CACHE STRING "GCC Compiler version")
 set(XENOMAI_BASE_DIR "/usr/xenomai" CACHE STRING "Xenomai base dir")
 set(XENOMAI_INC_DIR "${XENOMAI_BASE_DIR}/include/")
 set(XENOMAI_LIB_DIR "${XENOMAI_BASE_DIR}/lib/")
+
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=gnu++0x -Wall")
 
 set(FLOAT_ABI_SUFFIX "")
 
@@ -57,3 +60,4 @@ MESSAGE( STATUS "")
 # the project's entire directory structure. 
 add_subdirectory (src) 
 add_subdirectory (test)
+add_subdirectory (textures)
