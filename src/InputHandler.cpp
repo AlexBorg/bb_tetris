@@ -47,7 +47,7 @@ InputHandler :: InputHandler ()
 
   if ( out_queue < 0 )
   {
-    printf ( "InputHandler failed to create queue %d\n" , errno ) ;
+    rt_printf ( "InputHandler failed to create queue %d\n" , errno ) ;
   }
 
 }
@@ -112,8 +112,8 @@ void InputHandler :: start ()
   {
     if ( isValidInputEventFile ( globbuf . gl_pathv [ loop ] ) )
     {
-      rt_printf ( "starting thread \n" ) ;
       std :: string *filename = new std :: string ( globbuf . gl_pathv [ loop ] ) ;   
+      rt_printf ( "InputHandler starting thread: %s\n" , filename -> c_str () ) ;
 
       pthread_create ( &thread , NULL ,  ( void* (*) ( void*) ) ( thread_func ) , filename ) ;
       pthread_setschedprio ( thread , max_prio_for_policy ) ;
@@ -132,7 +132,7 @@ void* InputHandler :: thread_func ( void* in_ptr )
 {
   if ( in_ptr == NULL )
   {
-    rt_printf ( "InputHandler :: local_thread_func: received invalide pointer" ) ;
+    rt_printf ( "InputHandler :: thread_func: received invalide pointer" ) ;
     return NULL ;
   }
 
@@ -150,7 +150,7 @@ void* InputHandler :: thread_func ( void* in_ptr )
 
   if ( output < 0 )
   {
-    rt_printf ( "failed to open queue" ) ;
+    rt_printf ( "InputHandler: failed to open queue" ) ;
   }
 
   /* the events (up to 64 at once) */
