@@ -8,10 +8,10 @@
 #include <SDL/SDL.h>
 #include <SDL/SDL_image.h>
 #include "BBTdefines.hpp"
+#include "GameController.hpp"
+#include "GameState.hpp"
 
 using std::string;
-
-static GameState game;
 
 const GLdouble SCREEN_WIDTH  = 272.0;
 const GLdouble SCREEN_HEIGHT = 480.0;
@@ -58,8 +58,26 @@ GLuint LoadTexture(string file) {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+void DrawBlock(const BlockData & block, GLfloat x, GLfloat y) {
+  if(block.color < 1 || block.color > (signed)block_textures.size()) return;
+
+  glBindTexture(GL_TEXTURE_2D, block_textures[block.color - 1]);
+
+  glBegin(GL_QUADS);
+  glTexCoord2f(0.0f, 1.0f);
+  glVertex2f(x + 0.0, y + 0.0);
+  glTexCoord2f(1.0f, 1.0f);
+  glVertex2f(x + 0.0, y + 1.0);
+  glTexCoord2f(1.0f, 0.0f);
+  glVertex2f(x + 1.0, y + 1.0);
+  glTexCoord2f(0.0f, 0.0f);
+  glVertex2f(x + 1.0, y + 0.0);
+  glEnd();
+}
+
+////////////////////////////////////////////////////////////////////////////////
 // Main loop for display thread
-void DisplayHandler() {
+void DisplayHandler(GameController & controller) {
   SDL_Init(SDL_INIT_VIDEO);
   SDL_ShowCursor(0);
   SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
@@ -75,24 +93,16 @@ void DisplayHandler() {
   glLoadIdentity();
   gluOrtho2D(0.0, SCREEN_WIDTH / BLOCK_SIZE, 0.0, SCREEN_HEIGHT / BLOCK_SIZE);
 
-  for(int i = 1; i <= 6; i++) {
+  for(int i = 1; i <= BlockData::num_colors; i++) {
     block_textures.push_back(LoadTexture(string("block") + std::to_string(i) + ".png"));
   }
 
   glClearColor(0.0f, 0.0f, 0.3f, 0.0f);
 
   while(true) {
+    GameState game;
 
-    // Update state with a random row at the top
-    for(int x = 0; x < BOARD_WIDTH; x++) {
-      for(int y = 0; y < BOARD_HEIGHT - 1; y++) {
-        game.board[x][y].color = game.board[x][y+1].color;
-      }
-    }
-
-    for(int x = 0; x < BOARD_WIDTH; x++) {
-      game.board[x][BOARD_HEIGHT - 1].color = random() % 8;
-    }
+    controller.getGameState(game);
 
     // Draw game board
     glMatrixMode(GL_MODELVIEW);
@@ -101,24 +111,15 @@ void DisplayHandler() {
     glClear(GL_COLOR_BUFFER_BIT);
     glEnable(GL_TEXTURE_2D);
 
-    for(int x = 0; x < BOARD_WIDTH; x++)  {
-      for(int y = 0; y < BOARD_HEIGHT; y++) {
-        int color = game.board[x][y].color;
+    for(unsigned int x = 0; x < game.board.size(); x++)  {
+      for(unsigned int y = 0; y < game.board[x].size(); y++) {
+        DrawBlock(game.board[x][y], x, y);
+      }
+    }
 
-        if(color < 1 || color > block_textures.size()) continue;
-
-        glBindTexture(GL_TEXTURE_2D, block_textures[color - 1]);
-
-        glBegin(GL_QUADS);
-        glTexCoord2f(0.0f, 1.0f);
-        glVertex2f(x + 0.0, y + 0.0);
-        glTexCoord2f(1.0f, 1.0f);
-        glVertex2f(x + 0.0, y + 1.0);
-        glTexCoord2f(1.0f, 0.0f);
-        glVertex2f(x + 1.0, y + 1.0);
-        glTexCoord2f(0.0f, 0.0f);
-        glVertex2f(x + 1.0, y + 0.0);
-        glEnd();
+    for(int x = 0; x < Tetromino::width; x++)  {
+      for(int y = 0; y < Tetromino::height; y++) {
+        DrawBlock(game.active.getBlock(x, y), game.active.pos_x + x, game.active.pos_y + y);
       }
     }
 

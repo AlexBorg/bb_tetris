@@ -88,6 +88,15 @@ bool GameController :: downTick ()
   //check that current block can lower
   
   //if the current block is the lowest it can be, load next
+  if(!game_state.active.tryMove(game_state.board, 0, -1, 0) &&
+     !game_state.active.tryMove(game_state.board, 1, 0, 0)) {
+    game_state.active.place(game_state.board);
+    game_state.active = game_state.next;
+
+    game_state.next.reinitialize();
+    game_state.next.pos_x = 0;
+    game_state.next.pos_y = 20;
+  }
 }
 
 
@@ -101,57 +110,6 @@ bool GameController :: pause ()
   return true ;
 }
 
-
-///////////////////////////////////////////////////////////////////////////////
-/// \brief move the current block left if no collision
-/// \return true on success
-///
-bool GameController :: left ()
-{
-  return true ;
-}
-
-
-///////////////////////////////////////////////////////////////////////////////
-/// \brief move the current block right if no collision
-/// \return true on success
-///
-bool GameController :: right ()
-{
-  return true ;
-}
-
-
-///////////////////////////////////////////////////////////////////////////////
-/// \brief rotate the current block left if no collision
-/// \return true on success
-///
-bool GameController :: rotateLeft ()
-{
-  return true ;
-}
-
-
-///////////////////////////////////////////////////////////////////////////////
-/// \brief rotate the current block right if no collision
-/// \return true on success
-///
-bool GameController :: rotateRight ()
-{
-  return true ;
-}
-
-
-///////////////////////////////////////////////////////////////////////////////
-/// \brief drop the current block until a collision occurs
-/// \return true on success
-///
-bool GameController :: down ()
-{
-  return true ;
-}
-
-
 ///////////////////////////////////////////////////////////////////////////////
 /// \brief move the current block based on the input event.
 /// \return true on success
@@ -164,19 +122,22 @@ bool GameController :: processEvent ( int event )
       return pause () ;
       break ;
     case EV_LEFT :
-      return left () ;
+      game_state.active.tryMove(game_state.board, -1, 0, 0);
       break ;
     case EV_RIGHT :
-      return right () ;
+      game_state.active.tryMove(game_state.board, 1, 0, 0);
       break ;
     case EV_ROT_LEFT :
-      return rotateLeft () ;
+      game_state.active.tryMove(game_state.board, 0, 0, -1);
       break ;
     case EV_ROT_RIGHT :
-      return rotateRight () ;
+      game_state.active.tryMove(game_state.board, 0, 0, 1);
       break ;
     case EV_DOWN :
-      return down () ;
+      // Move down until failure
+      while(game_state.active.tryMove(game_state.board, 0, -1, 0));
+
+      game_state.active.place(game_state.board);
       break ;
   }
 
@@ -199,7 +160,7 @@ bool GameController :: processTick ( mqd_t input )
   while ( mq_receive ( input
                       , ( char* ) &event
                       , sizeof ( event )
-                      , NULL ))
+                      , NULL ) != -1)
   {
     processEvent ( event ) ;
   }
@@ -220,7 +181,7 @@ CLEANUP:
 void* GameController :: exec ()
 {
   mqd_t input = mq_open ( BBT_EVENT_QUEUE_NAME
-                      , O_RDONLY ) ;
+                      , O_RDONLY | O_NONBLOCK ) ;
 
   if ( input < 0 )
   {
@@ -231,7 +192,7 @@ void* GameController :: exec ()
   while ( 1 )
   { // make periodic?
     processTick ( input ) ;
-    sleep ( 1 ) ;
+    usleep ( 100000 ) ;
   }
   
   return NULL ;

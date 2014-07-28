@@ -5,6 +5,8 @@
 #ifndef BBT_DEFINES
 #define BBT_DEFINES 1
 
+#include <array>
+
 // instead of passing queue structure into contructors, have the objects create
 // the queue based on this name 
 #define BBT_EVENT_QUEUE_NAME "/BBT_EVENT_INPUT_QUEUE"
@@ -28,29 +30,19 @@ enum bbtEvents {
   , EV_DOWN
   , EV_PAUSE } ;
 
-typedef struct {
-  int color;
-} blockData ;
+class BlockData {
+public:
+  static const int num_colors = 7;
+
+  int id;    // Unique identifier for this particular block piece
+  int color; // Color of block (1 .. 7)
+  
+  BlockData() { BlockData(0, 0); };
+  BlockData(int _id, int _color) : id(_id), color(_color) {};
+};
 
 const int BOARD_WIDTH = 10;
 const int BOARD_HEIGHT = 20;
-
-class Tetromino {
-public:
-   static const int width = 4;
-   static const int height = 4;
-
-   blockData blocks[width][height]; // Grid containing the blockData for pieces
-   int x, y;                        // Bottom-left position of 4x4 grid
-
-   //void rotateLeft();
-   //void rotateRight();
-   //void randomize();
-};
-
-struct GameState {
-   blockData board[BOARD_WIDTH][BOARD_HEIGHT];
-   Tetromino active, next;
-};
+typedef std::array<std::array<BlockData, BOARD_HEIGHT>, BOARD_WIDTH> BoardState;
 
 #endif //BBT_DEFINES

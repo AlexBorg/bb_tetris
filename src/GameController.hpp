@@ -11,6 +11,7 @@
 
 // local includes
 #include "BBTdefines.hpp"
+#include "GameState.hpp"
 
 ///////////////////////////////////////////////////////////////////////////////
 /// \class accepts input from the input handler and manages changes to the 
@@ -33,12 +34,6 @@ private :
   struct GameState game_state ;
   
   bool pause () ;
-  bool left () ;
-  bool right () ;
-  bool rotateLeft () ;
-  bool rotateRight () ;
-  bool down () ;
-  
   bool downTick () ;
   bool processEvent ( int event ) ;
   bool processTick ( mqd_t input ) ;

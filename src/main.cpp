@@ -9,6 +9,7 @@
 #endif
 
 #include "InputHandler.hpp"
+#include "GameController.hpp"
 #include "DisplayHandler.hpp"
 
 //#include <posix.h>
@@ -29,9 +30,12 @@ int main () {
   InputHandler input ;
   input . start () ;
 
+  GameController controller;
+  controller.start();
+
   //while ( 1 )
     //sleep ( 1000 ) ;
 
-  DisplayHandler();
+  DisplayHandler(controller);
   return 0 ;
 }
