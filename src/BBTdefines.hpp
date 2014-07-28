@@ -39,6 +39,10 @@ public:
   
   BlockData() { BlockData(0, 0); };
   BlockData(int _id, int _color) : id(_id), color(_color) {};
+
+  bool operator==(const BlockData & bd) {
+    return id == bd.id && color == bd.color;
+  }
 };
 
 const int BOARD_WIDTH = 10;

@@ -58,21 +58,43 @@ GLuint LoadTexture(string file) {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-void DrawBlock(const BlockData & block, GLfloat x, GLfloat y) {
-  if(block.color < 1 || block.color > (signed)block_textures.size()) return;
+void DrawBlock(const BlockData & block, int x, int y) {
+  static BoardState last_state;
 
-  glBindTexture(GL_TEXTURE_2D, block_textures[block.color - 1]);
+  // Dont draw if outside the game board
+  if(x < 0 || x >= last_state.size()) return;
+  if(y < 0 || y >= last_state[x].size()) return;
+
+  // Don't draw if the same as last time
+  if(last_state[x][y] == block) return;
+  last_state[x][y] = block;
+
+  // Draw a black square if no color, otherwise textured square
+  if(block.color < 1 || block.color > (signed)block_textures.size()) {
+    glColor3ub(0, 0, 0);
+    glDisable(GL_TEXTURE_2D);
+  } else {
+    glColor3ub(255, 255, 255);
+    glEnable(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, block_textures[block.color - 1]);
+  }
+
+  // Draw block
+  glPushMatrix();
+  glTranslatef(x, y, 0.0);
 
   glBegin(GL_QUADS);
   glTexCoord2f(0.0f, 1.0f);
-  glVertex2f(x + 0.0, y + 0.0);
+  glVertex2f(0.0, 0.0);
   glTexCoord2f(1.0f, 1.0f);
-  glVertex2f(x + 0.0, y + 1.0);
+  glVertex2f(0.0, 1.0);
   glTexCoord2f(1.0f, 0.0f);
-  glVertex2f(x + 1.0, y + 1.0);
+  glVertex2f(1.0, 1.0);
   glTexCoord2f(0.0f, 0.0f);
-  glVertex2f(x + 1.0, y + 0.0);
+  glVertex2f(1.0, 0.0);
   glEnd();
+
+  glPopMatrix();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -88,42 +110,44 @@ void DisplayHandler(GameController & controller) {
   signal(SIGINT, SIG_DFL);
   signal(SIGTERM, SIG_DFL);
 
+  // Set up projection
   glViewport(0, 0, surface->w, surface->h);
   glMatrixMode(GL_PROJECTION);
   glLoadIdentity();
   gluOrtho2D(0.0, SCREEN_WIDTH / BLOCK_SIZE, 0.0, SCREEN_HEIGHT / BLOCK_SIZE);
 
+  // Load textures
   for(int i = 1; i <= BlockData::num_colors; i++) {
     block_textures.push_back(LoadTexture(string("block") + std::to_string(i) + ".png"));
   }
 
+  // Initialize display
+  glDisable(GL_DEPTH_TEST);
   glClearColor(0.0f, 0.0f, 0.3f, 0.0f);
+  glClear(GL_COLOR_BUFFER_BIT);
+
+  GameState game;
 
   while(true) {
-    GameState game;
-
     controller.getGameState(game);
 
-    // Draw game board
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
 
-    glClear(GL_COLOR_BUFFER_BIT);
-    glEnable(GL_TEXTURE_2D);
-
+    // Draw game board
     for(unsigned int x = 0; x < game.board.size(); x++)  {
       for(unsigned int y = 0; y < game.board[x].size(); y++) {
         DrawBlock(game.board[x][y], x, y);
       }
     }
 
+    // Draw active tetromino
     for(int x = 0; x < Tetromino::width; x++)  {
       for(int y = 0; y < Tetromino::height; y++) {
-        DrawBlock(game.active.getBlock(x, y), game.active.pos_x + x, game.active.pos_y + y);
+        BlockData b = game.active.getBlock(x, y);
+        if(b.color != 0) DrawBlock(b, game.active.pos_x + x, game.active.pos_y + y);
       }
     }
-
-    glDisable(GL_TEXTURE_2D);
 
     SDL_GL_SwapBuffers();
 
