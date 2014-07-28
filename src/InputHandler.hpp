@@ -2,6 +2,10 @@
 /// \file define the InputHandler class
 ///////////////////////////////////////////////////////////////////////////////
 
+#ifndef INPUT_HANDLER_H
+#define INPUT_HANDLER_H 1
+
+
 // external includes
 #include <mqueue.h>
 #include <linux/joystick.h>
@@ -28,6 +32,9 @@ private :
   static int processEvent ( const input_event &e , mqd_t output ) ;
 
   static void* thread_func ( void* ) ;
-  static void local_thread_func ( void* ) ;
 } ; 
+
+
+#endif //INPUT_HANDLER_H
+
 

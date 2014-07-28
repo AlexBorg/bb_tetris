@@ -6,7 +6,7 @@ link_directories (${BBT_SOURCE_DIR}/3rdparty/lib/ ${XENOMAI_LIB_DIR})
 
 # Add executable called "bbcd" that is built from the source files 
 # "ioTest.cpp". The extensions are automatically found. 
-add_executable (bbt main.cpp InputHandler.cpp DisplayHandler.cpp) 
+add_executable (bbt main.cpp InputHandler.cpp DisplayHandler.cpp GameController.cpp) 
 
 
 if (NOXENOMAI)
