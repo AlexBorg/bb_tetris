@@ -96,6 +96,8 @@ bool GameController :: downTick ()
     game_state.next.reinitialize();
     game_state.next.pos_x = 0;
     game_state.next.pos_y = 20;
+
+    game_state.score++;
   }
 }
 

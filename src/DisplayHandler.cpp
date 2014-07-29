@@ -2,6 +2,7 @@
 #include <cstdlib>
 #include <vector>
 #include <string>
+#include <tuple>
 #include <GL/gl.h>
 #include <GL/glx.h>
 #include <GL/glu.h>
@@ -18,6 +19,8 @@ const GLdouble SCREEN_HEIGHT = 480.0;
 const GLdouble BLOCK_SIZE    = 20.0;
 
 static std::vector<GLuint> block_textures;
+static std::vector<GLuint> digit_textures;
+static GLuint top_bar_texture;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Load a texture from an image file and return GL texture ID
@@ -58,6 +61,29 @@ GLuint LoadTexture(string file) {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+void DrawBox(GLfloat x, GLfloat y, GLfloat w, GLfloat h) {
+  glBegin(GL_QUADS);
+  glTexCoord2f(1.0f, 1.0f);
+  glVertex2f(x + w, y);
+  glTexCoord2f(1.0f, 0.0f);
+  glVertex2f(x + w, y + h);
+  glTexCoord2f(0.0f, 0.0f);
+  glVertex2f(x, y + h);
+  glTexCoord2f(0.0f, 1.0f);
+  glVertex2f(x, y);
+  glEnd();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void DrawBox(GLfloat x, GLfloat y, GLfloat w, GLfloat h, GLuint tex) {
+  glEnable(GL_TEXTURE_2D);
+  glBindTexture(GL_TEXTURE_2D, tex);
+  glColor3ub(255, 255, 255);
+  DrawBox(x, y, w, h);
+  glDisable(GL_TEXTURE_2D);
+}
+
+////////////////////////////////////////////////////////////////////////////////
 void DrawBlock(const BlockData & block, int x, int y) {
   static BoardState last_state;
 
@@ -70,31 +96,26 @@ void DrawBlock(const BlockData & block, int x, int y) {
   last_state[x][y] = block;
 
   // Draw a black square if no color, otherwise textured square
-  if(block.color < 1 || block.color > (signed)block_textures.size()) {
-    glColor3ub(0, 0, 0);
-    glDisable(GL_TEXTURE_2D);
-  } else {
-    glColor3ub(255, 255, 255);
-    glEnable(GL_TEXTURE_2D);
-    glBindTexture(GL_TEXTURE_2D, block_textures[block.color - 1]);
-  }
-
-  // Draw block
   glPushMatrix();
   glTranslatef(x, y, 0.0);
 
-  glBegin(GL_QUADS);
-  glTexCoord2f(0.0f, 1.0f);
-  glVertex2f(0.0, 0.0);
-  glTexCoord2f(1.0f, 1.0f);
-  glVertex2f(0.0, 1.0);
-  glTexCoord2f(1.0f, 0.0f);
-  glVertex2f(1.0, 1.0);
-  glTexCoord2f(0.0f, 0.0f);
-  glVertex2f(1.0, 0.0);
-  glEnd();
-
+  if(block.color < 1 || block.color > (signed)block_textures.size()) {
+    glColor3ub(0, 0, 0);
+    DrawBox(0.0f, 0.0f, 1.0f, 1.0f);
+  } else {
+    DrawBox(0.0f, 0.0f, 1.0f, 1.0f, block_textures[block.color - 1]);
+  }
   glPopMatrix();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void DrawDigits(GLfloat x, GLfloat y, int n_digits, unsigned int score) {
+  char digits[n_digits + 1];
+  snprintf(digits, sizeof(digits), "%.*u", n_digits, score);
+  
+  for(int i = 0; i < n_digits; i++) {
+    DrawBox(x + i, y, 1, 2, digit_textures[digits[i] - '0']);
+  }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -116,9 +137,17 @@ void DisplayHandler(GameController & controller) {
   glLoadIdentity();
   gluOrtho2D(0.0, SCREEN_WIDTH / BLOCK_SIZE, 0.0, SCREEN_HEIGHT / BLOCK_SIZE);
 
+  glMatrixMode(GL_MODELVIEW);
+  glLoadIdentity();
+
   // Load textures
+  top_bar_texture = LoadTexture(string("top_bar.png"));
   for(int i = 1; i <= BlockData::num_colors; i++) {
     block_textures.push_back(LoadTexture(string("block") + std::to_string(i) + ".png"));
+  }
+
+  for(int i = 0; i <= 9; i++) {
+    digit_textures.push_back(LoadTexture(string("digit") + std::to_string(i) + ".png"));
   }
 
   // Initialize display
@@ -126,13 +155,34 @@ void DisplayHandler(GameController & controller) {
   glClearColor(0.0f, 0.0f, 0.3f, 0.0f);
   glClear(GL_COLOR_BUFFER_BIT);
 
-  GameState game;
+  // Draw static top bar and initial score/level values
+  DrawBox(0.0f, SCREEN_HEIGHT / BLOCK_SIZE - 4, 14.0f, 4.0f, top_bar_texture);
+  DrawDigits(1.0f, SCREEN_HEIGHT / BLOCK_SIZE - 3, 6, 0);
+  DrawDigits(8.0f, SCREEN_HEIGHT / BLOCK_SIZE - 3, 1, 0);
 
+  GameState game;
+  unsigned int last_score = 0;
+  unsigned int last_level = 0;
   while(true) {
     controller.getGameState(game);
 
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
+
+    // Draw score
+    if(last_score != game.score) {
+      DrawDigits(1.0f, SCREEN_HEIGHT / BLOCK_SIZE - 3, 6, game.score);
+      last_score = game.score;
+    }
+
+    // Draw level
+    if(last_level != game.level) {
+      DrawDigits(8.0f, SCREEN_HEIGHT / BLOCK_SIZE - 3, 1, game.level);
+      last_level = game.level;
+    }
+
+    glPushMatrix();
+    glTranslatef((SCREEN_WIDTH / BLOCK_SIZE - BOARD_WIDTH) / 2.0f, 0.0f, 0.0f);
 
     // Draw game board
     for(unsigned int x = 0; x < game.board.size(); x++)  {
@@ -141,13 +191,62 @@ void DisplayHandler(GameController & controller) {
       }
     }
 
-    // Draw active tetromino
+    // Draw active tetromino over game board
     for(int x = 0; x < Tetromino::width; x++)  {
       for(int y = 0; y < Tetromino::height; y++) {
         BlockData b = game.active.getBlock(x, y);
         if(b.color != 0) DrawBlock(b, game.active.pos_x + x, game.active.pos_y + y);
       }
     }
+
+    glPopMatrix();
+
+    // Draw outlines
+    /*
+    static std::vector<std::tuple<GLfloat, GLfloat, GLfloat, GLfloat>> segments;
+
+    segments.clear();
+    for(unsigned int x = 0; x < game.board.size(); x++)  {
+      for(unsigned int y = 0; y < game.board[x].size(); y++) {
+        BlockData b = game.board[x][y];
+
+        if(b.color == 0) continue;
+
+        GLfloat offset = 1.0f / BLOCK_SIZE / 2.0f;
+        GLfloat top = y + 1.0 - offset;
+        GLfloat bottom = y + offset;
+        GLfloat left = x + offset;
+        GLfloat right = x + 1.0f - offset;
+
+        if(x == 0 || game.board[x - 1][y].id != b.id) {
+          segments.push_back(std::make_tuple(left, bottom - offset, left, top + offset));
+        }
+
+        if(x == game.board[x].size() - 1 || game.board[x + 1][y].id != b.id) {
+          segments.push_back(std::make_tuple(right, bottom - offset, right, top + offset));
+        }
+
+        if(y == 0 || game.board[x][y - 1].id != b.id) {
+          segments.push_back(std::make_tuple(left - offset, bottom, right + offset, bottom));
+        }
+
+        if(y == game.board.size() - 1 || game.board[x][y + 1].id != b.id) {
+          segments.push_back(std::make_tuple(left - offset, top, right + offset, top));
+        }
+      }
+    }
+
+    glDisable(GL_TEXTURE_2D);
+    glColor3ub(255, 255, 255);
+    glColor3ub(0, 0, 0);
+    glLineWidth(1.0);
+    glBegin(GL_LINES);
+    for(auto it = segments.begin(); it != segments.end(); ++it) {
+      glVertex2f(std::get<0>(*it), std::get<1>(*it));
+      glVertex2f(std::get<2>(*it), std::get<3>(*it));
+    }
+    glEnd();
+    */
 
     SDL_GL_SwapBuffers();
 
