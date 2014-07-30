@@ -17,6 +17,8 @@ using std::string;
 const GLdouble SCREEN_WIDTH  = 272.0;
 const GLdouble SCREEN_HEIGHT = 480.0;
 const GLdouble BLOCK_SIZE    = 20.0;
+const GLdouble AREA_WIDTH    = SCREEN_WIDTH / BLOCK_SIZE;
+const GLdouble AREA_HEIGHT   = SCREEN_HEIGHT / BLOCK_SIZE;
 
 static std::vector<GLuint> block_textures;
 static std::vector<GLuint> digit_textures;
@@ -125,20 +127,48 @@ void DisplayHandler(GameController & controller) {
   SDL_ShowCursor(0);
   SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
   SDL_GL_SetAttribute(SDL_GL_SWAP_CONTROL, 1);
+
+  // Attempt to create portrait orientation surface
   SDL_Surface *surface = SDL_SetVideoMode(SCREEN_WIDTH, SCREEN_HEIGHT, 0, SDL_OPENGL | SDL_FULLSCREEN);
+
+  // If we fail to create the first surface, assume that we're running
+  // in landscape on the LCD CAPE and rotate here
+  bool rotate_display = false;
+  if(surface == NULL) {
+    rotate_display = true;
+    surface = SDL_SetVideoMode(SCREEN_HEIGHT, SCREEN_WIDTH, 0, SDL_OPENGL | SDL_FULLSCREEN);
+  }
+
+  // Still failed. WTF?
+  if(surface == NULL) {
+    printf("Failed to create video surface: %s\n", SDL_GetError());
+    exit(1);
+  }
 
   // Don't let SDL stomp on these
   signal(SIGINT, SIG_DFL);
   signal(SIGTERM, SIG_DFL);
 
-  // Set up projection
+  // Set up projection -- reversed if display rotated
   glViewport(0, 0, surface->w, surface->h);
   glMatrixMode(GL_PROJECTION);
   glLoadIdentity();
-  gluOrtho2D(0.0, SCREEN_WIDTH / BLOCK_SIZE, 0.0, SCREEN_HEIGHT / BLOCK_SIZE);
+
+  if(rotate_display) {
+    gluOrtho2D(0.0, AREA_HEIGHT, 0.0, AREA_WIDTH);
+  } else {
+    gluOrtho2D(0.0, AREA_WIDTH, 0.0, AREA_HEIGHT);
+  }
 
   glMatrixMode(GL_MODELVIEW);
   glLoadIdentity();
+
+  // If rotated, rotate around center and return to bottom-left corner
+  if(rotate_display) {
+    glTranslatef(AREA_HEIGHT / 2.0, AREA_WIDTH / 2.0, 0.0);
+    glRotatef(-90.0f, 0.0f, 0.0f, 1.0f);
+    glTranslatef(-AREA_WIDTH / 2.0, -AREA_HEIGHT / 2.0, 0.0);
+  }
 
   // Load textures
   top_bar_texture = LoadTexture(string("top_bar.png"));
@@ -152,37 +182,36 @@ void DisplayHandler(GameController & controller) {
 
   // Initialize display
   glDisable(GL_DEPTH_TEST);
-  glClearColor(0.0f, 0.0f, 0.3f, 0.0f);
+  glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
   glClear(GL_COLOR_BUFFER_BIT);
 
   // Draw static top bar and initial score/level values
-  DrawBox(0.0f, SCREEN_HEIGHT / BLOCK_SIZE - 4, 14.0f, 4.0f, top_bar_texture);
-  DrawDigits(1.0f, SCREEN_HEIGHT / BLOCK_SIZE - 3, 6, 0);
-  DrawDigits(8.0f, SCREEN_HEIGHT / BLOCK_SIZE - 3, 1, 0);
+  DrawBox(0.0f, AREA_HEIGHT - 4, 14.0f, 4.0f, top_bar_texture);
+  DrawDigits(1.0f, AREA_HEIGHT - 3, 6, 0);
+  DrawDigits(8.0f, AREA_HEIGHT - 3, 1, 0);
 
   GameState game;
   unsigned int last_score = 0;
   unsigned int last_level = 0;
+
+  // Redraw display as fast as we can (not at all fast)
   while(true) {
     controller.getGameState(game);
 
-    glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity();
-
     // Draw score
     if(last_score != game.score) {
-      DrawDigits(1.0f, SCREEN_HEIGHT / BLOCK_SIZE - 3, 6, game.score);
+      DrawDigits(1.0f, AREA_HEIGHT - 3, 6, game.score);
       last_score = game.score;
     }
 
     // Draw level
     if(last_level != game.level) {
-      DrawDigits(8.0f, SCREEN_HEIGHT / BLOCK_SIZE - 3, 1, game.level);
+      DrawDigits(8.0f, AREA_HEIGHT - 3, 1, game.level);
       last_level = game.level;
     }
 
     glPushMatrix();
-    glTranslatef((SCREEN_WIDTH / BLOCK_SIZE - BOARD_WIDTH) / 2.0f, 0.0f, 0.0f);
+    glTranslatef((AREA_WIDTH - BOARD_WIDTH) / 2.0f, 0.0f, 0.0f);
 
     // Draw game board
     for(unsigned int x = 0; x < game.board.size(); x++)  {
