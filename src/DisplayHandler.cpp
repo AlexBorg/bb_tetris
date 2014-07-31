@@ -86,7 +86,7 @@ void DrawBox(GLfloat x, GLfloat y, GLfloat w, GLfloat h, GLuint tex) {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-void DrawBlock(const BlockData & block, int x, int y) {
+void DrawBlock(const BlockData & block, unsigned int x, unsigned int y) {
   static BoardState last_state;
 
   // Dont draw if outside the game board

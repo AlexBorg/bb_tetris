@@ -10,8 +10,18 @@ public:
   Tetromino active, next;
   unsigned int score;
   unsigned int level;
+  bool paused ;
+  bool game_over ;
 
-  GameState() : score(0), level(1) {
+  GameState() { reset () ; }
+  
+  void reset ()
+  {
+    score = 0 ;
+    level = 1 ;
+    paused = false ;
+    game_over = false ;
+    
     for(unsigned int x = 0; x < board.size(); x++) {
       for(unsigned int y = 0; y < board[x].size(); y++) {
         board[x][y] = BlockData(0, 0);

@@ -35,6 +35,9 @@ int main ( int argc , char** argv )
                                , ( char* ) &msg
                                , sizeof ( msg )
                                , NULL ) ;
+    if ( result < 1 )
+      continue ;
+
     switch ( msg )
     {
       case EV_NONE :

@@ -21,6 +21,9 @@
 #include "BBTdefines.hpp"
 
 // defines
+#define TICKS_TIL_DROP_MAX 10
+#define TICKS_TIL_DROP_MIN 1
+#define FULL_LINE_COLOR_MAX 7
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -29,6 +32,14 @@
 GameController :: GameController ()
 {
   pthread_mutex_init ( &output_lock , NULL ) ;
+  input_queue = mq_open ( BBT_EVENT_QUEUE_NAME
+                      , O_RDONLY | O_NONBLOCK ) ;
+
+  if ( input_queue < 0 )
+  {
+    rt_printf ( "GameController: failed to open queue" ) ;
+  }
+  reset () ;
 }
 
 
@@ -47,6 +58,7 @@ GameController :: ~GameController ()
 ///
 void GameController :: start ()
 {
+  reset () ;
   pthread_attr_t attr ;
   pthread_attr_init ( &attr ) ;
   int policy = 0 ;
@@ -61,6 +73,20 @@ void GameController :: start ()
   pthread_setschedprio ( thread , max_prio_for_policy ) ;
   pthread_attr_destroy ( &attr ) ;
 }
+
+
+
+///////////////////////////////////////////////////////////////////////////////
+/// \brief reset - initializes the game board for a new game
+///
+void GameController :: reset ()
+{
+  ticks_til_drop = TICKS_TIL_DROP_MAX ;
+  tick_count = 0 ;
+  game_state . reset () ;
+  full_lines . clear () ;
+}
+
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -88,18 +114,111 @@ bool GameController :: downTick ()
   //check that current block can lower
   
   //if the current block is the lowest it can be, load next
-  if(!game_state.active.tryMove(game_state.board, 0, -1, 0) &&
-     !game_state.active.tryMove(game_state.board, 1, 0, 0)) {
+  if(!game_state.active.tryMove(game_state.board, 0, -1, 0) )
+  {
     game_state.active.place(game_state.board);
+    if ( game_state . active . pos_y >= BOARD_HEIGHT - 3 ) // HEIGHT - 3 is the starting position
+    {
+      game_state . game_over = true ;
+    }
     game_state.active = game_state.next;
 
     game_state.next.reinitialize();
-    game_state.next.pos_x = 0;
-    game_state.next.pos_y = 20;
 
-    game_state.score++;
+    int lines = getFullLines () ;
+    
+    game_state.score += lines * lines * 10 ;
+    game_state.score++ ; // one point for each block dropped
   }
+  return true ;
 }
+
+
+
+///////////////////////////////////////////////////////////////////////////////
+/// \brief determine if any lines are full
+///
+int GameController :: getFullLines ()
+{
+  for ( unsigned int y = 0 ; y < BOARD_HEIGHT ; ++y )
+  {
+    bool line_full = true ;
+    for ( unsigned int x = 0 ; x < BOARD_WIDTH ; ++x )
+    {
+      if ( game_state . board [ x ] [ y ] . color == 0 )
+      {
+        line_full = false ;
+        break ;
+      }
+    }
+    if ( line_full )
+    {
+      full_lines . push_back ( y ) ;
+    }
+  }
+  return full_lines . size () ;
+}
+
+
+
+///////////////////////////////////////////////////////////////////////////////
+/// \brief blink the full lines
+/// \return true on success
+///
+bool GameController :: processFullLines ()
+{ 
+  if ( tick_count >= FULL_LINE_COLOR_MAX )
+  {
+    return removeFullLines () ;
+  }
+  
+  for ( unsigned int loop = 0 ; loop < full_lines . size () ; ++loop )
+  {
+    int y = full_lines [ loop ] ;
+    for ( unsigned int x = 0 ; x < BOARD_WIDTH ; ++x )
+    {
+      game_state . board [ x ] [ y ] . color = tick_count ;
+    }
+  }
+  return true ;
+}
+
+
+
+
+///////////////////////////////////////////////////////////////////////////////
+/// \brief remove the full lines and drop the remaining lines
+/// \return true on success
+///
+bool GameController :: removeFullLines ()
+{
+  unsigned int line_offset = 0 ;
+  unsigned int full_line_index = 0 ;
+  for ( unsigned int y = 0 ; y < BOARD_HEIGHT ; ++y )
+  {
+    while ( full_line_index < full_lines . size ()
+        && ( y + line_offset == full_lines [ full_line_index ] ))
+    {
+      ++line_offset ;
+      ++full_line_index ;
+    }
+    if ( line_offset )
+    {
+      for ( unsigned int x = 0 ; x < BOARD_WIDTH ; ++x )
+      {
+        if ( y + line_offset < game_state . board . size () )
+          game_state . board [ x ] [ y ] = game_state . board [ x ] [ y + line_offset ] ;
+        else
+          game_state . board [ x ] [ y ] = BlockData ( 0 , 0 ) ;
+      }
+    }
+  }
+  
+  full_lines . clear () ;
+  tick_count = 0 ;
+  return true ;
+}
+
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -108,9 +227,15 @@ bool GameController :: downTick ()
 ///
 bool GameController :: pause ()
 {
-  
+  game_state . paused = !game_state . paused ;
+  if ( game_state . game_over )
+  {
+    reset () ;
+  }
   return true ;
 }
+
+
 
 ///////////////////////////////////////////////////////////////////////////////
 /// \brief move the current block based on the input event.
@@ -124,26 +249,32 @@ bool GameController :: processEvent ( int event )
       return pause () ;
       break ;
     case EV_LEFT :
-      game_state.active.tryMove(game_state.board, -1, 0, 0);
+      if ( !game_state . paused )
+        game_state.active.tryMove(game_state.board, -1, 0, 0);
       break ;
     case EV_RIGHT :
-      game_state.active.tryMove(game_state.board, 1, 0, 0);
+      if ( !game_state . paused )
+        game_state.active.tryMove(game_state.board, 1, 0, 0);
       break ;
     case EV_ROT_LEFT :
-      game_state.active.tryMove(game_state.board, 0, 0, -1);
+      if ( !game_state . paused )
+        game_state.active.tryMove(game_state.board, 0, 0, -1);
       break ;
     case EV_ROT_RIGHT :
-      game_state.active.tryMove(game_state.board, 0, 0, 1);
+      if ( !game_state . paused )
+        game_state.active.tryMove(game_state.board, 0, 0, 1);
       break ;
     case EV_DOWN :
       // Move down until failure
-      while(game_state.active.tryMove(game_state.board, 0, -1, 0));
-
-      game_state.active.place(game_state.board);
-      break ;
+      if ( !game_state . paused )
+      {
+        while(game_state.active.tryMove(game_state.board, 0, -1, 0));
+        game_state.active.place(game_state.board);
+      }
+      break ; 
+    default :
+      rt_printf ( "unknown event %d\n" , event ) ;    
   }
-
-  rt_printf ( "unknown event\n" ) ;
   return false ;
 }
 
@@ -152,23 +283,35 @@ bool GameController :: processEvent ( int event )
 /// \brief process all events and update game board state for each one
 /// \return true on success
 ///
-bool GameController :: processTick ( mqd_t input )
+bool GameController :: processTick ()
 {
   bool result = true ;
-  pthread_mutex_lock ( &output_lock ) ;
-  
   int event = 0 ;
-  
-  while ( mq_receive ( input
+  pthread_mutex_lock ( &output_lock ) ;
+
+  while ( mq_receive ( input_queue
                       , ( char* ) &event
                       , sizeof ( event )
                       , NULL ) != -1)
   {
     processEvent ( event ) ;
   }
-  
-  // FIXME: Borg: the block shouldn't drop every frame, need timer for this.
-  downTick () ;
+
+  if ( game_state . paused || game_state . game_over )
+    goto CLEANUP ;
+
+  ++tick_count ;
+  if ( !full_lines . empty () )
+  {
+    processFullLines () ;
+    goto CLEANUP ;
+  }
+    
+  if ( tick_count > ticks_til_drop )
+  {
+    downTick () ;
+    tick_count = 0 ;
+  }
 
 CLEANUP:
   pthread_mutex_unlock ( &output_lock ) ;
@@ -182,18 +325,9 @@ CLEANUP:
 ///
 void* GameController :: exec ()
 {
-  mqd_t input = mq_open ( BBT_EVENT_QUEUE_NAME
-                      , O_RDONLY | O_NONBLOCK ) ;
-
-  if ( input < 0 )
-  {
-    rt_printf ( "GameController: failed to open queue" ) ;
-    return NULL ;
-  }
-  
   while ( 1 )
   { // make periodic?
-    processTick ( input ) ;
+    processTick () ;
     usleep ( 100000 ) ;
   }
   

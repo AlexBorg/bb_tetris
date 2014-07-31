@@ -8,6 +8,7 @@
 
 // external includes
 #include <mqueue.h>
+#include <vector>
 
 // local includes
 #include "BBTdefines.hpp"
@@ -29,14 +30,25 @@ public :
   
 
 private :
+  void reset () ; 
+  int getFullLines () ;
+  bool processFullLines () ;
+  bool removeFullLines () ;
+  
   pthread_t thread ;
   pthread_mutex_t output_lock ;
+  mqd_t input_queue ;
+                    
   struct GameState game_state ;
+  unsigned int ticks_til_drop ;
+  unsigned int tick_count = 0 ;
+  std :: vector < unsigned int > full_lines ;
+  
   
   bool pause () ;
   bool downTick () ;
   bool processEvent ( int event ) ;
-  bool processTick ( mqd_t input ) ;
+  bool processTick () ;
   static void* thread_func ( void* in_thread_obj ) ;
   void* exec () ;
 } ; 

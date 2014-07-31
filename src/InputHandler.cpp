@@ -108,7 +108,7 @@ void InputHandler :: start ()
   glob ( "/dev/input/event*" , GLOB_TILDE , NULL , &globbuf ) ;
   printf ( "number of events found %d\n" , ( int ) globbuf . gl_pathc ) ;
 
-  for ( int loop = 0 ; loop < globbuf . gl_pathc ; ++loop )
+  for ( unsigned int loop = 0 ; loop < globbuf . gl_pathc ; ++loop )
   {
     if ( isValidInputEventFile ( globbuf . gl_pathv [ loop ] ) )
     {
@@ -138,7 +138,6 @@ void* InputHandler :: thread_func ( void* in_ptr )
 
   std :: string *filename = ( std :: string* ) in_ptr ;
   int fd = -1 ;
-  char name [ 256 ] = "Unknown" ;
 
   if ( ( fd = open ( filename -> c_str () , O_RDONLY ) ) < 0 ) {
     perror("evdev open");
@@ -160,7 +159,8 @@ void* InputHandler :: thread_func ( void* in_ptr )
   while ( 1 )
   {
     size_t rb = read ( fd , &ev , sizeof ( struct input_event ) ) ;
-    processEvent ( ev , output ) ;
+    if ( rb > 0 )
+      processEvent ( ev , output ) ;
   }
 
 /*******
