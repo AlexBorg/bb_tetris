@@ -41,7 +41,7 @@ private :
                     
   struct GameState game_state ;
   unsigned int ticks_til_drop ;
-  unsigned int tick_count = 0 ;
+  unsigned int tick_count ;
   std :: vector < unsigned int > full_lines ;
   
   
