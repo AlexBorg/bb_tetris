@@ -50,7 +50,11 @@ private :
   bool processEvent ( int event ) ;
   bool processTick () ;
   static void* periodicFunc ( void* in_thread_obj ) ;
+  #ifdef NOXENOMAI
   static void* threadFunc ( void* in_thread_obj ) ;
+  #else
+  static void threadFunc ( void* in_thread_obj ) ;
+  #endif
   void* exec () ;
 } ; 
 

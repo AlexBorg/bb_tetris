@@ -11,6 +11,8 @@
 #ifdef NOXENOMAI
 #include <pthread.h>
 #else
+#include <native/task.h>
+
 #include <xenomai/posix/pthread.h>
 #include <sys/time.h>
 #endif
@@ -32,6 +34,9 @@
 #define TICKS_TIL_DROP_MIN 1
 #define FULL_LINE_COLOR_MAX 7
 
+#define TASK_PRIO  99 /* Highest RT priority */
+#define TASK_MODE  0  /* No flags */
+#define TASK_STKSZ 0  /* Stack size (use default one) */
 
 ///////////////////////////////////////////////////////////////////////////////
 /// \brief
@@ -65,20 +70,40 @@ GameController :: ~GameController ()
 ///
 void GameController :: start ()
 {
+#ifdef NOXENOMAI
   reset () ;
   pthread_attr_t attr ;
   pthread_attr_init ( &attr ) ;
   int policy = 0 ;
   int max_prio_for_policy = 0 ;
+  int retval = 0 ;
+
+  retval = pthread_attr_setschedpolicy ( &attr , SCHED_FIFO ) ;
+  rt_printf ( "set schedule policy ret %d\n" , retval ) ;
   
   pthread_attr_getschedpolicy ( &attr , &policy ) ;
   max_prio_for_policy = sched_get_priority_max ( policy ) ;
 
   rt_printf ( "GameController starting thread \n" ) ;
   
-  pthread_create ( &thread , NULL ,  ( void* (*) ( void*) ) ( threadFunc ) , this ) ;
+  retval = pthread_create ( &thread , &attr ,  ( void* (*) ( void*) ) ( threadFunc ) , this ) ;
+  rt_printf ( "create_thread ret %d\n" , retval ) ;
   pthread_setschedprio ( thread , max_prio_for_policy ) ;
   pthread_attr_destroy ( &attr ) ;
+  rt_printf ( "created_thread_id %d\n" , thread ) ;
+#else
+
+  RT_TASK thread_desc ;
+  int err = rt_task_create ( &thread_desc
+                           , "game logic"
+                           , TASK_STKSZ
+                           , TASK_PRIO
+                           , TASK_MODE ) ;
+  if ( !err )
+    rt_task_start ( &thread_desc , threadFunc , this ) ;
+
+
+#endif
 }
 
 
@@ -348,6 +373,7 @@ void* GameController :: periodicFunc ( void* in_thread_obj )
 
 
 
+#ifdef NOXENOMAI
 ///////////////////////////////////////////////////////////////////////////////
 /// \brief thread loop for systems without periodic timers. Calls periodicFunc
 ///  and waits 16.66 milliseconds
@@ -355,28 +381,42 @@ void* GameController :: periodicFunc ( void* in_thread_obj )
 ///
 void* GameController :: threadFunc ( void* in_thread_obj )
 {
-  #ifndef NOXENOMAI
-    struct timespec cur_time , period ;
-    clock_gettime ( clock() , &cur_time ) ;
-    period . tv_sec = 0 ;
-    period . tv_nsec = 16666666 ;
-    //pthread_make_periodic_np ( pthread_self () , gethrtime () , 16666666 ) ;
-    pthread_make_periodic_np ( pthread_self () , &cur_time , &period ) ;
-  #endif
-
   while ( 1 )
   {
     GameController :: periodicFunc ( in_thread_obj ) ;
-    #ifdef NOXENOMAI
-      usleep ( 16666 ) ;
-    #else
-      pthread_wait_np ( NULL ) ;
-    #endif
+    usleep ( 16666 ) ;
   }
 
   return NULL ;
 }
 
+#else
 
+///////////////////////////////////////////////////////////////////////////////
+/// \brief thread loop for systems using xenomai. establishes a 16 ms timer
+///  and Calls periodicFunc each loop
+/// \return will never return
+///
+void GameController :: threadFunc ( void* in_thread_obj )
+{
+  int result = rt_task_set_periodic ( NULL , TM_NOW , 16666666 ) ;
+  //if ( result != 0 )
+  {
+    rt_printf ( "make periodic result = %d\n" , result ) ;
+  }
+  long unsigned overruns = 0 ;
+  
+  while ( 1 )
+  {
+    GameController :: periodicFunc ( in_thread_obj ) ;
+    result = rt_task_wait_period ( &overruns ) ;
+    if ( result != 0 )
+    {
+//      rt_printf ( "pthread_wait_np result = %d\n" , result ) ;
+    }
+  }
+}
+
+#endif
 
 
