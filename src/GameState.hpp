@@ -10,6 +10,7 @@ public:
   Tetromino active, next;
   unsigned int score;
   unsigned int level;
+  unsigned int lines_cleared;
   bool paused ;
   bool game_over ;
 
@@ -19,6 +20,7 @@ public:
   {
     score = 0 ;
     level = 1 ;
+    lines_cleared = 0 ;
     paused = false ;
     game_over = false ;
     

@@ -49,7 +49,8 @@ private :
   bool downTick () ;
   bool processEvent ( int event ) ;
   bool processTick () ;
-  static void* thread_func ( void* in_thread_obj ) ;
+  static void* periodicFunc ( void* in_thread_obj ) ;
+  static void* threadFunc ( void* in_thread_obj ) ;
   void* exec () ;
 } ; 
 

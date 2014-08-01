@@ -21,7 +21,7 @@
 #include "BBTdefines.hpp"
 
 // defines
-#define TICKS_TIL_DROP_MAX 10
+#define TICKS_TIL_DROP_MAX 100
 #define TICKS_TIL_DROP_MIN 1
 #define FULL_LINE_COLOR_MAX 7
 
@@ -69,7 +69,7 @@ void GameController :: start ()
 
   rt_printf ( "GameController starting thread \n" ) ;
   
-  pthread_create ( &thread , NULL ,  ( void* (*) ( void*) ) ( thread_func ) , this ) ;
+  pthread_create ( &thread , NULL ,  ( void* (*) ( void*) ) ( threadFunc ) , this ) ;
   pthread_setschedprio ( thread , max_prio_for_policy ) ;
   pthread_attr_destroy ( &attr ) ;
 }
@@ -127,6 +127,12 @@ bool GameController :: downTick ()
 
     int lines = getFullLines () ;
     
+    game_state . lines_cleared += lines ;
+    game_state . level = game_state . lines_cleared / 10 + 1 ;
+    ticks_til_drop = TICKS_TIL_DROP_MAX - ( game_state . level * 5 ) ;
+    if ( ticks_til_drop > TICKS_TIL_DROP_MAX ) // overflow
+      ticks_til_drop = 0 ;
+    
     game_state.score += lines * lines * 10 ;
     game_state.score++ ; // one point for each block dropped
   }
@@ -137,6 +143,7 @@ bool GameController :: downTick ()
 
 ///////////////////////////////////////////////////////////////////////////////
 /// \brief determine if any lines are full
+/// \return the number of full lines
 ///
 int GameController :: getFullLines ()
 {
@@ -162,7 +169,7 @@ int GameController :: getFullLines ()
 
 
 ///////////////////////////////////////////////////////////////////////////////
-/// \brief blink the full lines
+/// \brief blink the full lines and then remove if count has passed.
 /// \return true on success
 ///
 bool GameController :: processFullLines ()
@@ -206,7 +213,7 @@ bool GameController :: removeFullLines ()
     {
       for ( unsigned int x = 0 ; x < BOARD_WIDTH ; ++x )
       {
-        if ( y + line_offset < game_state . board . size () )
+        if ( y + line_offset < game_state . board [ 0 ] . size () )
           game_state . board [ x ] [ y ] = game_state . board [ x ] [ y + line_offset ] ;
         else
           game_state . board [ x ] [ y ] = BlockData ( 0 , 0 ) ;
@@ -319,30 +326,43 @@ CLEANUP:
 }
 
 
+
 ///////////////////////////////////////////////////////////////////////////////
-/// \brief thread function loop
+/// \brief function to be called every 60 Hz.
 /// \return always NULL
 ///
-void* GameController :: exec ()
+void* GameController :: periodicFunc ( void* in_thread_obj )
 {
-  while ( 1 )
-  { // make periodic?
-    processTick () ;
-    usleep ( 100000 ) ;
-  }
-  
+  GameController* object = ( GameController* ) in_thread_obj ;
+  object -> processTick () ;
+
   return NULL ;
 }
 
 
+
 ///////////////////////////////////////////////////////////////////////////////
-/// \brief thread function start point, calls local_thread_func
-/// \return always NULL
+/// \brief thread loop for systems without periodic timers. Calls periodicFunc
+///  and waits 16.66 milliseconds
+/// \return will never return
 ///
-void* GameController :: thread_func ( void* in_thread_obj )
+void* GameController :: threadFunc ( void* in_thread_obj )
 {
-  GameController* object = ( GameController* ) in_thread_obj ;
-  return object -> exec () ;
+  #ifndef NOXENOMAI
+  	pthread_make_periodic_np ( pthread_self () , gethrtime () , 16666666 ) ;
+  #endif
+
+  while ( 1 )
+  {
+    GameController :: periodicFunc ( in_thread_obj ) ;
+    #ifdef NOXENOMAI
+      usleep ( 16666 ) ;
+    #else
+      pthread_wait_np () ;
+    #endif
+  }
+
+  return NULL ;
 }
 
 
