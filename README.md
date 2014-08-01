@@ -19,6 +19,10 @@ options that can be added:
         cmake -DNOXENOMAI
 	make
 
+## Running
+
+Due to the input method, the program must be run as root. Executable will be found in the bin directory of the build directory.
+
 ### authors
 Alex Borg
 Robert Sebastian

@@ -14,5 +14,5 @@ if (NOXENOMAI)
   add_definitions(-DNOXENOMAI=1)
 else ()
   # Link the executable to the 3rdparty library. 
-  target_link_libraries (bbt native xenomai pthread rt X11 GL GLU SDL SDL_image) 
+  target_link_libraries (bbt native xenomai pthread_rt rt X11 GL GLU SDL SDL_image) 
 endif()

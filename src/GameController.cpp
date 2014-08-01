@@ -8,7 +8,14 @@
 // external includes
 /// xenomai/posix includes
 #include <mqueue.h>
+#ifdef NOXENOMAI
 #include <pthread.h>
+#else
+#include <xenomai/posix/pthread.h>
+#include <sys/time.h>
+#endif
+
+#include <time.h>
 
 #include <stdio.h>
 #include <string.h>
@@ -147,10 +154,10 @@ bool GameController :: downTick ()
 ///
 int GameController :: getFullLines ()
 {
-  for ( unsigned int y = 0 ; y < BOARD_HEIGHT ; ++y )
+  for ( int y = 0 ; y < BOARD_HEIGHT ; ++y )
   {
     bool line_full = true ;
-    for ( unsigned int x = 0 ; x < BOARD_WIDTH ; ++x )
+    for ( int x = 0 ; x < BOARD_WIDTH ; ++x )
     {
       if ( game_state . board [ x ] [ y ] . color == 0 )
       {
@@ -182,7 +189,7 @@ bool GameController :: processFullLines ()
   for ( unsigned int loop = 0 ; loop < full_lines . size () ; ++loop )
   {
     int y = full_lines [ loop ] ;
-    for ( unsigned int x = 0 ; x < BOARD_WIDTH ; ++x )
+    for ( int x = 0 ; x < BOARD_WIDTH ; ++x )
     {
       game_state . board [ x ] [ y ] . color = tick_count ;
     }
@@ -201,7 +208,7 @@ bool GameController :: removeFullLines ()
 {
   unsigned int line_offset = 0 ;
   unsigned int full_line_index = 0 ;
-  for ( unsigned int y = 0 ; y < BOARD_HEIGHT ; ++y )
+  for ( int y = 0 ; y < BOARD_HEIGHT ; ++y )
   {
     while ( full_line_index < full_lines . size ()
         && ( y + line_offset == full_lines [ full_line_index ] ))
@@ -211,7 +218,7 @@ bool GameController :: removeFullLines ()
     }
     if ( line_offset )
     {
-      for ( unsigned int x = 0 ; x < BOARD_WIDTH ; ++x )
+      for ( int x = 0 ; x < BOARD_WIDTH ; ++x )
       {
         if ( y + line_offset < game_state . board [ 0 ] . size () )
           game_state . board [ x ] [ y ] = game_state . board [ x ] [ y + line_offset ] ;
@@ -349,7 +356,12 @@ void* GameController :: periodicFunc ( void* in_thread_obj )
 void* GameController :: threadFunc ( void* in_thread_obj )
 {
   #ifndef NOXENOMAI
-  	pthread_make_periodic_np ( pthread_self () , gethrtime () , 16666666 ) ;
+    struct timespec cur_time , period ;
+    clock_gettime ( clock() , &cur_time ) ;
+    period . tv_sec = 0 ;
+    period . tv_nsec = 16666666 ;
+    //pthread_make_periodic_np ( pthread_self () , gethrtime () , 16666666 ) ;
+    pthread_make_periodic_np ( pthread_self () , &cur_time , &period ) ;
   #endif
 
   while ( 1 )
@@ -358,7 +370,7 @@ void* GameController :: threadFunc ( void* in_thread_obj )
     #ifdef NOXENOMAI
       usleep ( 16666 ) ;
     #else
-      pthread_wait_np () ;
+      pthread_wait_np ( NULL ) ;
     #endif
   }
 
