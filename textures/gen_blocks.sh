@@ -17,3 +17,6 @@ xcf2png block.xcf -o block_top.png    bg glow top
 xcf2png block.xcf -o block_bottom.png bg glow bottom
 xcf2png block.xcf -o block_left.png   bg glow left
 xcf2png block.xcf -o block_right.png  bg glow right
+
+xcf2png messages.xcf -o paused.png    bg paused
+xcf2png messages.xcf -o game_over.png bg game_over

@@ -25,6 +25,8 @@ static std::vector<GLuint> digit_textures;
 static GLuint tex_bg;
 static GLuint tex_block_bg, tex_block_outer, tex_block_inner;
 static GLuint tex_block_top, tex_block_bottom, tex_block_left, tex_block_right;
+static GLuint tex_paused;
+static GLuint tex_game_over;
 
 // Colors to use for blocks
 static std::vector<unsigned int> colors = {0x000000, 0xFF6666, 0x66FF66,
@@ -298,6 +300,8 @@ void DisplayHandler(GameController & controller) {
   tex_block_bottom = LoadTexture(string("block_bottom.png"));
   tex_block_left   = LoadTexture(string("block_left.png"));
   tex_block_right  = LoadTexture(string("block_right.png"));
+  tex_paused       = LoadTexture(string("paused.png"));
+  tex_game_over    = LoadTexture(string("game_over.png"));
 
   for(int i = 0; i <= 9; i++) {
     digit_textures.push_back(LoadTexture(string("digit") + std::to_string(i) + ".png"));
@@ -313,30 +317,26 @@ void DisplayHandler(GameController & controller) {
   DrawDigits(1.0f, AREA_HEIGHT - 3, 6, 0);
   DrawDigits(8.0f, AREA_HEIGHT - 3, 1, 0);
 
-  GameState game;
+  GameState game, last_game;
   BoardTextureMap curr_board, last_board;
-  unsigned int last_score = 0;
-  unsigned int last_level = 0;
-  Tetromino last_next_tetromino = Tetromino();
 
   // Redraw display as fast as we can (not at all fast)
   while(true) {
+    last_game = game;
     controller.getGameState(game);
 
     // Draw score
-    if(last_score != game.score) {
+    if(game.score != last_game.score) {
       DrawDigits(1.0f, AREA_HEIGHT - 3, 6, game.score);
-      last_score = game.score;
     }
 
     // Draw level
-    if(last_level != game.level) {
+    if(game.level != last_game.level) {
       DrawDigits(8.0f, AREA_HEIGHT - 3, 1, game.level);
-      last_level = game.level;
     }
 
     // Draw next tetromino
-    if(last_next_tetromino != game.next) {
+    if(game.next != last_game.next) {
       glPushMatrix();
       glTranslatef(11.5f, AREA_HEIGHT - 2.0f, 0.0f);
       
@@ -358,28 +358,40 @@ void DisplayHandler(GameController & controller) {
           }
       }
       glPopMatrix();
-
-      last_next_tetromino = game.next;
     }
 
-    // Draw game board
+    // Draw game area
     glPushMatrix();
     glTranslatef((AREA_WIDTH - BOARD_WIDTH) / 2.0f, 0.0f, 0.0f);
 
-    game.active.place(game.board); // Draw with active tetromino
+    if(!game.game_over && !game.paused) {
+      bool refresh = last_game.game_over || last_game.paused;
 
-    for(unsigned int x = 0; x < game.board.size(); x++)  {
-      for(unsigned int y = 0; y < game.board[x].size(); y++) {
-        curr_board[x][y] = BlockTextureMap(x, y, game.board);
+      // Draw game board
+      game.active.place(game.board); // Draw with active tetromino
 
-        // Redraw block only if it has changed since the last frame
-        if(curr_board[x][y] != last_board[x][y]) {
-          DrawBlock(x, y, curr_board[x][y]);
+      for(unsigned int x = 0; x < game.board.size(); x++)  {
+        for(unsigned int y = 0; y < game.board[x].size(); y++) {
+          curr_board[x][y] = BlockTextureMap(x, y, game.board);
+
+          // Redraw block only if it has changed since the last frame
+          if(curr_board[x][y] != last_board[x][y] || refresh) {
+            DrawBlock(x, y, curr_board[x][y]);
+          }
         }
       }
-    }
 
-    last_board = curr_board;
+      last_board = curr_board;
+
+    } else if(game.game_over && !last_game.game_over) {
+      // Draw "GAME OVER" message
+      DrawBox(0.0f, 0.0f, 10.0f, 20.0f, tex_game_over);
+
+    } else if(game.paused && !last_game.paused) {
+      // Draw "PAUSED" message
+      DrawBox(0.0f, 0.0f, 10.0f, 20.0f, tex_paused);
+
+    }
 
     glPopMatrix();
 
