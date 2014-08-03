@@ -149,13 +149,14 @@ bool GameController :: downTick ()
   if(!game_state.active.tryMove(game_state.board, 0, -1, 0) )
   {
     game_state.active.place(game_state.board);
-    if ( game_state . active . pos_y >= BOARD_HEIGHT - 3 ) // HEIGHT - 3 is the starting position
+    game_state.active = game_state.next;
+    game_state.next.reinitialize();
+
+    // If new block already intersects at the top of the board, game over
+    if (game_state.active.wouldIntersect(game_state.board, 0, 0, 0))
     {
       game_state . game_over = true ;
     }
-    game_state.active = game_state.next;
-
-    game_state.next.reinitialize();
 
     int lines = getFullLines () ;
     

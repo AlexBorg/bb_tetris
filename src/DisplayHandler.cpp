@@ -20,9 +20,167 @@ const GLdouble BLOCK_SIZE    = 20.0;
 const GLdouble AREA_WIDTH    = SCREEN_WIDTH / BLOCK_SIZE;
 const GLdouble AREA_HEIGHT   = SCREEN_HEIGHT / BLOCK_SIZE;
 
-static std::vector<GLuint> block_textures;
+// Textures to load
 static std::vector<GLuint> digit_textures;
-static GLuint top_bar_texture;
+static GLuint tex_bg;
+static GLuint tex_block_bg, tex_block_outer, tex_block_inner;
+static GLuint tex_block_top, tex_block_bottom, tex_block_left, tex_block_right;
+
+// Colors to use for blocks
+static std::vector<unsigned int> colors = {0x000000, 0xFF6666, 0x66FF66,
+  0x6666FF, 0xFFFF66, 0x66FFFF, 0xFF66FF, 0x0099FF };
+
+// 3x3 table of which textures to use to draw this block -- this consists of
+// four corners, four edges, and the center, which is always the same.
+struct BlockTextureMap {
+  GLuint tex[3][3];
+  unsigned int color;
+
+  BlockTextureMap() {
+    color = 0;
+    memset(tex, 0, sizeof(tex));
+  }
+
+  // Generate texture map from board state
+  BlockTextureMap(unsigned int block_x, unsigned int block_y, const BoardState & board) {
+    bool context[3][3];
+
+    for(auto x = 0; x < 3; x++) {
+      for(auto y = 0; y < 3; y++) {
+        auto pos_x = block_x + x - 1;
+        auto pos_y = block_y + y - 1;
+        context[x][y] = pos_x >= 0 && pos_x < board.size() &&
+                        pos_y >= 0 && pos_y < board[pos_x].size() &&
+                        board[block_x][block_y] == board[pos_x][pos_y];
+      }
+    }
+
+    initialize(context, board[block_x][block_y].color);
+  }
+
+  // Generate texture map based on individual tetromino
+  BlockTextureMap(unsigned int block_x, unsigned int block_y, const Tetromino & piece) {
+    bool context[3][3];
+
+    for(auto x = 0; x < 3; x++) {
+      for(auto y = 0; y < 3; y++) {
+        int pos_x = block_x + x - 1;
+        int pos_y = block_y + y - 1;
+        context[x][y] = pos_x >= 0 && pos_x < piece.width &&
+                        pos_y >= 0 && pos_y < piece.height &&
+                        piece.getBlock(pos_x, pos_y).color != 0;
+      }
+    }
+
+    initialize(context, piece.getBlock(block_x, block_y).color);
+  }
+
+  // From context of surrounding blocks, determine which textures to use to
+  // draw this block -- this consists of four corners, four edges, and the
+  // center, which is always the same.
+  void initialize(bool ctx[3][3], unsigned int block_color) {
+    color = colors.at(block_color);
+
+    tex[0][0] = ctx[1][0] && ctx[0][1] && ctx[0][0] ? tex_block_bg :
+                ctx[1][0] && ctx[0][1]              ? tex_block_inner :
+                ctx[1][0]                           ? tex_block_left :
+                ctx[0][1]                           ? tex_block_bottom :
+                                                      tex_block_outer;
+    tex[0][1] = ctx[0][1] ? tex_block_bg : tex_block_left;
+    tex[0][2] = ctx[1][2] && ctx[0][1] && ctx[0][2] ? tex_block_bg :
+                ctx[1][2] && ctx[0][1]              ? tex_block_inner :
+                ctx[1][2]                           ? tex_block_left :
+                ctx[0][1]                           ? tex_block_top :
+                                                      tex_block_outer;
+    tex[1][0] = ctx[1][0] ? tex_block_bg : tex_block_bottom;
+    tex[1][1] = tex_block_bg;
+    tex[1][2] = ctx[1][2] ? tex_block_bg : tex_block_top;
+    tex[2][0] = ctx[1][0] && ctx[2][1] && ctx[2][0] ? tex_block_bg :
+                ctx[1][0] && ctx[2][1]              ? tex_block_inner :
+                ctx[1][0]                           ? tex_block_right :
+                ctx[2][1]                           ? tex_block_bottom :
+                                                      tex_block_outer;
+    tex[2][1] = ctx[2][1] ? tex_block_bg : tex_block_right;
+    tex[2][2] = ctx[1][2] && ctx[2][1] && ctx[2][2] ? tex_block_bg :
+                ctx[1][2] && ctx[2][1]              ? tex_block_inner :
+                ctx[1][2]                           ? tex_block_right :
+                ctx[2][1]                           ? tex_block_top :
+                                                      tex_block_outer;
+  }
+
+  bool operator==(const BlockTextureMap & other) {
+    return memcmp(tex, other.tex, sizeof(tex)) == 0 && color == other.color;
+  }
+
+  bool operator!=(const BlockTextureMap & other) {
+    return !operator==(other);
+  }
+};
+
+typedef std::array<std::array<BlockTextureMap, BOARD_HEIGHT>, BOARD_WIDTH> BoardTextureMap;
+
+////////////////////////////////////////////////////////////////////////////////
+void DrawBox(GLfloat x, GLfloat y, GLfloat w, GLfloat h) {
+  glBegin(GL_QUADS);
+  glTexCoord2f(0.0f, 1.0f);
+  glVertex2f(x, y);
+  glTexCoord2f(0.0f, 0.0f);
+  glVertex2f(x, y + h);
+  glTexCoord2f(1.0f, 0.0f);
+  glVertex2f(x + w, y + h);
+  glTexCoord2f(1.0f, 1.0f);
+  glVertex2f(x + w, y);
+  glEnd();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void DrawBlockPart(float x, float y, float w, float h, GLuint tex) {
+  glBindTexture(GL_TEXTURE_2D, tex);
+
+  glPushMatrix();
+  glTranslatef(x, y, 0.0f);
+
+  glBegin(GL_QUADS);
+  glTexCoord2f(x, 1.0f - y);
+  glVertex2f(0.0f, 0.0f);
+  glTexCoord2f(x, 1.0f - y - h);
+  glVertex2f(0.0f, h);
+  glTexCoord2f(x + w, 1.0f - y - h);
+  glVertex2f(w, h);
+  glTexCoord2f(x + w, 1.0f - y);
+  glVertex2f(w, 0.0f);
+  glEnd();
+
+  glPopMatrix();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Draw a block at x,y using a texture map
+void DrawBlock(float x, float y, const BlockTextureMap & map) {
+  glPushMatrix();
+  glTranslatef(x, y, 0.0f);
+
+  glColor3ub((map.color >> 16) & 0xFF, (map.color >> 8) & 0xFF, map.color & 0xFF);
+
+  if(map.color == 0) {
+    // Just draw an untexture box if color is black
+    DrawBox(0.0f, 0.0f, 1.0f, 1.0f);
+  } else {
+    glEnable(GL_TEXTURE_2D);
+    DrawBlockPart(0.00f, 0.75f, 0.25f, 0.25f, map.tex[0][2]);
+    DrawBlockPart(0.25f, 0.75f, 0.50f, 0.25f, map.tex[1][2]);
+    DrawBlockPart(0.75f, 0.75f, 0.25f, 0.25f, map.tex[2][2]);
+    DrawBlockPart(0.00f, 0.25f, 0.25f, 0.50f, map.tex[0][1]);
+    DrawBlockPart(0.25f, 0.25f, 0.50f, 0.50f, map.tex[1][1]);
+    DrawBlockPart(0.75f, 0.25f, 0.25f, 0.50f, map.tex[2][1]);
+    DrawBlockPart(0.00f, 0.00f, 0.25f, 0.25f, map.tex[0][0]);
+    DrawBlockPart(0.25f, 0.00f, 0.50f, 0.25f, map.tex[1][0]);
+    DrawBlockPart(0.75f, 0.00f, 0.25f, 0.25f, map.tex[2][0]);
+    glDisable(GL_TEXTURE_2D);
+  }
+
+  glPopMatrix();
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 // Load a texture from an image file and return GL texture ID
@@ -56,24 +214,10 @@ GLuint LoadTexture(string file) {
   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex_rgba->w, tex_rgba->h, 0, GL_RGBA, GL_UNSIGNED_BYTE, tex_rgba->pixels);
   SDL_FreeSurface(tex_rgba);
 
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
   return tex_id;
-}
-
-////////////////////////////////////////////////////////////////////////////////
-void DrawBox(GLfloat x, GLfloat y, GLfloat w, GLfloat h) {
-  glBegin(GL_QUADS);
-  glTexCoord2f(1.0f, 1.0f);
-  glVertex2f(x + w, y);
-  glTexCoord2f(1.0f, 0.0f);
-  glVertex2f(x + w, y + h);
-  glTexCoord2f(0.0f, 0.0f);
-  glVertex2f(x, y + h);
-  glTexCoord2f(0.0f, 1.0f);
-  glVertex2f(x, y);
-  glEnd();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -83,31 +227,6 @@ void DrawBox(GLfloat x, GLfloat y, GLfloat w, GLfloat h, GLuint tex) {
   glColor3ub(255, 255, 255);
   DrawBox(x, y, w, h);
   glDisable(GL_TEXTURE_2D);
-}
-
-////////////////////////////////////////////////////////////////////////////////
-void DrawBlock(const BlockData & block, unsigned int x, unsigned int y) {
-  static BoardState last_state;
-
-  // Dont draw if outside the game board
-  if(x < 0 || x >= last_state.size()) return;
-  if(y < 0 || y >= last_state[x].size()) return;
-
-  // Don't draw if the same as last time
-  if(last_state[x][y] == block) return;
-  last_state[x][y] = block;
-
-  // Draw a black square if no color, otherwise textured square
-  glPushMatrix();
-  glTranslatef(x, y, 0.0);
-
-  if(block.color < 1 || block.color > (signed)block_textures.size()) {
-    glColor3ub(0, 0, 0);
-    DrawBox(0.0f, 0.0f, 1.0f, 1.0f);
-  } else {
-    DrawBox(0.0f, 0.0f, 1.0f, 1.0f, block_textures[block.color - 1]);
-  }
-  glPopMatrix();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -171,10 +290,14 @@ void DisplayHandler(GameController & controller) {
   }
 
   // Load textures
-  top_bar_texture = LoadTexture(string("top_bar.png"));
-  for(int i = 1; i <= BlockData::num_colors; i++) {
-    block_textures.push_back(LoadTexture(string("block") + std::to_string(i) + ".png"));
-  }
+  tex_bg           = LoadTexture(string("background.png"));
+  tex_block_bg     = LoadTexture(string("block_bg.png"));
+  tex_block_outer  = LoadTexture(string("block_outer.png"));
+  tex_block_inner  = LoadTexture(string("block_inner.png"));
+  tex_block_top    = LoadTexture(string("block_top.png"));
+  tex_block_bottom = LoadTexture(string("block_bottom.png"));
+  tex_block_left   = LoadTexture(string("block_left.png"));
+  tex_block_right  = LoadTexture(string("block_right.png"));
 
   for(int i = 0; i <= 9; i++) {
     digit_textures.push_back(LoadTexture(string("digit") + std::to_string(i) + ".png"));
@@ -186,13 +309,15 @@ void DisplayHandler(GameController & controller) {
   glClear(GL_COLOR_BUFFER_BIT);
 
   // Draw static top bar and initial score/level values
-  DrawBox(0.0f, AREA_HEIGHT - 4, 14.0f, 4.0f, top_bar_texture);
+  DrawBox(0.0f, 0.0f, 14.0f, AREA_HEIGHT, tex_bg);
   DrawDigits(1.0f, AREA_HEIGHT - 3, 6, 0);
   DrawDigits(8.0f, AREA_HEIGHT - 3, 1, 0);
 
   GameState game;
+  BoardTextureMap curr_board, last_board;
   unsigned int last_score = 0;
   unsigned int last_level = 0;
+  Tetromino last_next_tetromino = Tetromino();
 
   // Redraw display as fast as we can (not at all fast)
   while(true) {
@@ -210,77 +335,54 @@ void DisplayHandler(GameController & controller) {
       last_level = game.level;
     }
 
+    // Draw next tetromino
+    if(last_next_tetromino != game.next) {
+      glPushMatrix();
+      glTranslatef(11.5f, AREA_HEIGHT - 2.0f, 0.0f);
+      
+      // Just blank out the whole area
+      glColor3ub(0, 0, 0);
+      DrawBox(-1.5f, -1.5f, 3.0f, 3.0f);
+
+      // Scale down a bit so it fits
+      glScalef(0.75f, 0.75f, 0.0f);
+      
+      for(auto x = 0; x < game.next.width; x++) {
+          for(auto y = 0; y < game.next.height; y++) {
+              auto center = game.next.getCenter();
+
+              BlockTextureMap block_tex = BlockTextureMap(x, y, game.next);
+              if(block_tex.color != 0) {
+                DrawBlock(x - center.first, y - center.second, block_tex);
+              }
+          }
+      }
+      glPopMatrix();
+
+      last_next_tetromino = game.next;
+    }
+
+    // Draw game board
     glPushMatrix();
     glTranslatef((AREA_WIDTH - BOARD_WIDTH) / 2.0f, 0.0f, 0.0f);
 
-    // Draw game board
+    game.active.place(game.board); // Draw with active tetromino
+
     for(unsigned int x = 0; x < game.board.size(); x++)  {
       for(unsigned int y = 0; y < game.board[x].size(); y++) {
-        DrawBlock(game.board[x][y], x, y);
+        curr_board[x][y] = BlockTextureMap(x, y, game.board);
+
+        // Redraw block only if it has changed since the last frame
+        if(curr_board[x][y] != last_board[x][y]) {
+          DrawBlock(x, y, curr_board[x][y]);
+        }
       }
     }
 
-    // Draw active tetromino over game board
-    for(int x = 0; x < Tetromino::width; x++)  {
-      for(int y = 0; y < Tetromino::height; y++) {
-        BlockData b = game.active.getBlock(x, y);
-        if(b.color != 0) DrawBlock(b, game.active.pos_x + x, game.active.pos_y + y);
-      }
-    }
+    last_board = curr_board;
 
     glPopMatrix();
 
-    // Draw outlines
-    /*
-    static std::vector<std::tuple<GLfloat, GLfloat, GLfloat, GLfloat>> segments;
-
-    segments.clear();
-    for(unsigned int x = 0; x < game.board.size(); x++)  {
-      for(unsigned int y = 0; y < game.board[x].size(); y++) {
-        BlockData b = game.board[x][y];
-
-        if(b.color == 0) continue;
-
-        GLfloat offset = 1.0f / BLOCK_SIZE / 2.0f;
-        GLfloat top = y + 1.0 - offset;
-        GLfloat bottom = y + offset;
-        GLfloat left = x + offset;
-        GLfloat right = x + 1.0f - offset;
-
-        if(x == 0 || game.board[x - 1][y].id != b.id) {
-          segments.push_back(std::make_tuple(left, bottom - offset, left, top + offset));
-        }
-
-        if(x == game.board[x].size() - 1 || game.board[x + 1][y].id != b.id) {
-          segments.push_back(std::make_tuple(right, bottom - offset, right, top + offset));
-        }
-
-        if(y == 0 || game.board[x][y - 1].id != b.id) {
-          segments.push_back(std::make_tuple(left - offset, bottom, right + offset, bottom));
-        }
-
-        if(y == game.board.size() - 1 || game.board[x][y + 1].id != b.id) {
-          segments.push_back(std::make_tuple(left - offset, top, right + offset, top));
-        }
-      }
-    }
-
-    glDisable(GL_TEXTURE_2D);
-    glColor3ub(255, 255, 255);
-    glColor3ub(0, 0, 0);
-    glLineWidth(1.0);
-    glBegin(GL_LINES);
-    for(auto it = segments.begin(); it != segments.end(); ++it) {
-      glVertex2f(std::get<0>(*it), std::get<1>(*it));
-      glVertex2f(std::get<2>(*it), std::get<3>(*it));
-    }
-    glEnd();
-    */
-
     SDL_GL_SwapBuffers();
-
-    // Nothing handled yet
-    //SDL_Event event;
-    //while(SDL_PollEvent(&event));
   }
 }

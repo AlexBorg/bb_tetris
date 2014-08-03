@@ -40,8 +40,12 @@ public:
   BlockData() { BlockData(0, 0); };
   BlockData(int _id, int _color) : id(_id), color(_color) {};
 
-  bool operator==(const BlockData & bd) {
+  bool operator==(const BlockData & bd) const {
     return id == bd.id && color == bd.color;
+  }
+
+  bool operator!=(const BlockData & bd) const {
+    return !operator==(bd);
   }
 };
 

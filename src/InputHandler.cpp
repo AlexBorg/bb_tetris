@@ -78,6 +78,7 @@ bool isValidInputEventFile ( char* filename )
 
   if ( strcasestr ( name , "PLAYSTATION" )
       || strcasestr ( name , "Keyboard" )
+      || strcasestr ( name , "Gamepad" )
       )
   {
     rt_printf ( "using device%s\n" , filename ) ;
@@ -296,7 +297,7 @@ int InputHandler :: processEvent ( const js_event &e , mqd_t output )
   { // only worry about button presses, not releases
     int msg = EV_NONE ;
     // debugging statement used to find button mappings
-    //rt_printf ( "button # %d, value %d\n", e . number , e . value ) ;
+    rt_printf ( "button # %d, value %d\n", e . number , e . value ) ;
     switch ( e . number )
     {
        case 3 :

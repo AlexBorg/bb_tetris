@@ -1,19 +1,5 @@
 #!/bin/bash
 
-n_blocks=7
-
-# Convert GIMP file to png -- imagemagick's support for this is poor
-xcf2png blocks.xcf -o blocks.png
-
-# Generate six evenly color shifted blocks from the base image
-for x in `seq 1 $n_blocks`; do
-  convert -flatten \
-    -resize 20x20 \
-    -modulate 100,100,$((200 / $n_blocks * (x - 1))) \
-    blocks.png block$x.png
-done
-rm blocks.png
-
 # Generate digit textures
 for x in `seq 0 9`; do
   xcf2png digits.xcf -o digit$x.png Background $x
@@ -21,5 +7,13 @@ for x in `seq 0 9`; do
 done;
 
 # Generate top bar
-xcf2png top_bar.xcf -o top_bar.png
-mogrify -resize 560x80 top_bar.png
+xcf2png background.xcf -o background.png
+mogrify -resize 280x480 background.png
+
+xcf2png block.xcf -o block_bg.png     bg glow
+xcf2png block.xcf -o block_inner.png  bg glow inner
+xcf2png block.xcf -o block_outer.png  bg glow outer
+xcf2png block.xcf -o block_top.png    bg glow top
+xcf2png block.xcf -o block_bottom.png bg glow bottom
+xcf2png block.xcf -o block_left.png   bg glow left
+xcf2png block.xcf -o block_right.png  bg glow right
