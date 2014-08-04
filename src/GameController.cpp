@@ -143,8 +143,6 @@ bool GameController :: getGameState ( GameState &out_state )
 ///
 bool GameController :: downTick ()
 {
-  //check that current block can lower
-  
   //if the current block is the lowest it can be, load next
   if(!game_state.active.tryMove(game_state.board, 0, -1, 0) )
   {
@@ -310,6 +308,8 @@ bool GameController :: processEvent ( int event )
       {
         while(game_state.active.tryMove(game_state.board, 0, -1, 0));
         game_state.active.place(game_state.board);
+        game_state.active = game_state.next;
+        game_state.next.reinitialize();
       }
       break ; 
     default :
