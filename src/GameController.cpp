@@ -349,7 +349,7 @@ bool GameController :: processTick ()
   }
 
   if ( tick_count % 2 == 0 && moving_down )
-    game_state.active.tryMove(game_state.board, 0, -1, 0);
+    downTick();
   if ( tick_count % 4 == 0 && moving_left )
     game_state.active.tryMove(game_state.board, -1, 0, 0);
   if ( tick_count % 4 == 0 && moving_right )
