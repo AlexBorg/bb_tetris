@@ -19,6 +19,7 @@ const GLdouble SCREEN_HEIGHT = 480.0;
 const GLdouble BLOCK_SIZE    = 20.0;
 const GLdouble AREA_WIDTH    = SCREEN_WIDTH / BLOCK_SIZE;
 const GLdouble AREA_HEIGHT   = SCREEN_HEIGHT / BLOCK_SIZE;
+const GLdouble BOARD_INSET   = (AREA_WIDTH - BOARD_WIDTH) / 2.0;
 
 // Textures to load
 static std::vector<GLuint> digit_textures;
@@ -316,6 +317,7 @@ void DisplayHandler(GameController & controller) {
   DrawBox(0.0f, 0.0f, 14.0f, AREA_HEIGHT, tex_bg);
   DrawDigits(1.0f, AREA_HEIGHT - 3, 6, 0);
   DrawDigits(8.0f, AREA_HEIGHT - 3, 1, 0);
+  DrawBox(BOARD_INSET, 0.0f, 10.0f, 20.0f, tex_paused);
 
   GameState game, last_game;
   BoardTextureMap curr_board, last_board;
@@ -362,7 +364,7 @@ void DisplayHandler(GameController & controller) {
 
     // Draw game area
     glPushMatrix();
-    glTranslatef((AREA_WIDTH - BOARD_WIDTH) / 2.0f, 0.0f, 0.0f);
+    glTranslatef(BOARD_INSET, 0.0f, 0.0f);
 
     if(!game.game_over && !game.paused) {
       bool refresh = last_game.game_over || last_game.paused;

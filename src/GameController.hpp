@@ -17,8 +17,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 /// \class accepts input from the input handler and manages changes to the 
 /// game board. It allows the display handler to pull game board data from 
-/// this class.
-///////////////////////////////////////////////////////////////////////////////
+/// this class.  ///////////////////////////////////////////////////////////////////////////////
 class GameController
 {
 public :
@@ -44,6 +43,7 @@ private :
   unsigned int tick_count ;
   std :: vector < unsigned int > full_lines ;
   
+  bool moving_down, moving_left, moving_right;
   
   bool pause () ;
   bool downTick () ;

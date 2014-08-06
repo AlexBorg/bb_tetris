@@ -46,20 +46,29 @@ int main ( int argc , char** argv )
       case EV_PAUSE :
         printf ( "received EV_PAUSE msg\n" ) ;
         break ;
-      case EV_LEFT :
-        printf ( "received EV_LEFT msg\n" ) ;
+      case EV_START_LEFT :
+        printf ( "received EV_START_LEFT msg\n" ) ;
+        break ;
+      case EV_STOP_LEFT :
+        printf ( "received EV_STOP_LEFT msg\n" ) ;
         break ;
       case EV_ROT_LEFT :
         printf ( "received EV_ROT_LEFT msg\n" ) ;
         break ;
-      case EV_RIGHT :
-        printf ( "received EV_RIGHT msg\n" ) ;
+      case EV_START_RIGHT :
+        printf ( "received EV_START_RIGHT msg\n" ) ;
+        break ;
+      case EV_STOP_RIGHT :
+        printf ( "received EV_STOP_RIGHT msg\n" ) ;
         break ;
       case EV_ROT_RIGHT :
         printf ( "received EV_ROT_RIGHT msg\n" ) ;
         break ;
-      case EV_DOWN :
-        printf ( "received EV_DOWN msg\n" ) ;
+      case EV_START_DOWN :
+        printf ( "received EV_START_DOWN msg\n" ) ;
+        break ;
+      case EV_STOP_DOWN :
+        printf ( "received EV_STOP_DOWN msg\n" ) ;
         break ;
     }
 

@@ -21,7 +21,7 @@ public:
     score = 0 ;
     level = 1 ;
     lines_cleared = 0 ;
-    paused = false ;
+    paused = true ;
     game_over = false ;
     
     for(unsigned int x = 0; x < board.size(); x++) {

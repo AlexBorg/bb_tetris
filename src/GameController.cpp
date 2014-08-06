@@ -128,7 +128,7 @@ void GameController :: reset ()
 bool GameController :: getGameState ( GameState &out_state )
 {
   pthread_mutex_lock ( &output_lock ) ;
-  out_state = game_state ; // FIXME: Borg: do we need to overload the copy?
+  out_state = game_state ;
   pthread_mutex_unlock ( &output_lock ) ;
   return true ;
 }
@@ -284,15 +284,20 @@ bool GameController :: processEvent ( int event )
   switch ( event )
   {
     case EV_PAUSE :
+      moving_down = moving_left = moving_right = false;
       return pause () ;
       break ;
-    case EV_LEFT :
-      if ( !game_state . paused )
-        game_state.active.tryMove(game_state.board, -1, 0, 0);
+    case EV_START_LEFT :
+      moving_left = true ;
       break ;
-    case EV_RIGHT :
-      if ( !game_state . paused )
-        game_state.active.tryMove(game_state.board, 1, 0, 0);
+    case EV_STOP_LEFT :
+      moving_left = false ;
+      break ;
+    case EV_START_RIGHT :
+      moving_right = true ;
+      break ;
+    case EV_STOP_RIGHT :
+      moving_right = false ;
       break ;
     case EV_ROT_LEFT :
       if ( !game_state . paused )
@@ -302,16 +307,12 @@ bool GameController :: processEvent ( int event )
       if ( !game_state . paused )
         game_state.active.tryMove(game_state.board, 0, 0, 1);
       break ;
-    case EV_DOWN :
-      // Move down until failure
-      if ( !game_state . paused )
-      {
-        while(game_state.active.tryMove(game_state.board, 0, -1, 0));
-        game_state.active.place(game_state.board);
-        game_state.active = game_state.next;
-        game_state.next.reinitialize();
-      }
+    case EV_START_DOWN :
+      moving_down = true ;
       break ; 
+    case EV_STOP_DOWN :
+      moving_down = false ;
+      break ;
     default :
       rt_printf ( "unknown event %d\n" , event ) ;    
   }
@@ -346,6 +347,13 @@ bool GameController :: processTick ()
     processFullLines () ;
     goto CLEANUP ;
   }
+
+  if ( tick_count % 2 == 0 && moving_down )
+    game_state.active.tryMove(game_state.board, 0, -1, 0);
+  if ( tick_count % 4 == 0 && moving_left )
+    game_state.active.tryMove(game_state.board, -1, 0, 0);
+  if ( tick_count % 4 == 0 && moving_right )
+    game_state.active.tryMove(game_state.board, 1, 0, 0);
     
   if ( tick_count > ticks_til_drop )
   {

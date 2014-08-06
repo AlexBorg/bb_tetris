@@ -23,11 +23,11 @@
 // events from the InputHandler to the Processing Handler
 enum bbtEvents {
     EV_NONE
-  , EV_LEFT
-  , EV_RIGHT
+  , EV_START_LEFT, EV_STOP_LEFT
+  , EV_START_RIGHT, EV_STOP_RIGHT
   , EV_ROT_LEFT
   , EV_ROT_RIGHT
-  , EV_DOWN
+  , EV_START_DOWN, EV_STOP_DOWN
   , EV_PAUSE } ;
 
 class BlockData {
